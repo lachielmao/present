@@ -1,0 +1,1267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chloe & Lachie</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Lato:wght@300;400;700&display=swap');
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:#1a0a2e;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;overflow:hidden;font-family:'Lato',sans-serif;}
+#game-wrapper{position:relative;width:100%;max-width:860px;}
+canvas{display:block;width:100%;height:auto;border-radius:8px;box-shadow:0 8px 60px rgba(0,0,0,0.6);}
+#ui{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;}
+#dialogue-box{
+  position:absolute;bottom:2%;left:50%;transform:translateX(-50%);
+  width:calc(100% - 6%);max-width:860px;
+  background:rgba(8,4,20,0.92);
+  border:1px solid rgba(255,200,150,0.25);
+  border-radius:10px;padding:clamp(8px,2.5%,16px) clamp(10px,3%,22px) clamp(6px,2%,14px);
+  pointer-events:all;cursor:pointer;
+  backdrop-filter:blur(6px);
+  display:none;
+}
+#dialogue-name{
+  font-family:'Playfair Display',serif;
+  font-size:clamp(12px,1.8vw,15px);font-weight:700;
+  color:#ffcc88;margin-bottom:4px;letter-spacing:0.05em;
+}
+#dialogue-text{
+  font-size:clamp(11px,1.7vw,14px);line-height:1.65;color:#f0e8d8;
+  min-height:32px;
+}
+#dialogue-continue{
+  float:right;font-size:clamp(9px,1.3vw,11px);color:rgba(255,200,100,0.5);
+  margin-top:4px;letter-spacing:0.1em;animation:blink 1.2s infinite;
+}
+@keyframes blink{0%,100%{opacity:0.3}50%{opacity:1}}
+#chapter-title{
+  position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  text-align:center;pointer-events:none;
+  opacity:0;transition:opacity 0.8s;width:90%;
+}
+#chapter-title h2{
+  font-family:'Playfair Display',serif;
+  font-size:clamp(10px,1.5vw,13px);font-weight:400;letter-spacing:0.25em;
+  color:rgba(255,200,120,0.8);text-transform:uppercase;margin-bottom:8px;
+}
+#chapter-title h1{
+  font-family:'Playfair Display',serif;
+  font-size:clamp(20px,4vw,34px);color:#fff;letter-spacing:0.04em;
+}
+#chapter-title p{
+  font-size:clamp(9px,1.3vw,12px);color:rgba(255,255,255,0.4);
+  margin-top:8px;letter-spacing:0.12em;text-transform:uppercase;
+}
+#hint{
+  position:absolute;bottom:17%;left:50%;transform:translateX(-50%);
+  font-size:clamp(9px,1.3vw,11px);color:rgba(255,255,255,0.2);
+  letter-spacing:0.1em;text-transform:uppercase;pointer-events:none;white-space:nowrap;
+}
+#progress{
+  position:absolute;top:clamp(8px,1.5%,16px);right:clamp(10px,2%,20px);
+  display:flex;gap:6px;pointer-events:none;
+}
+.prog-dot{
+  width:clamp(5px,1vw,7px);height:clamp(5px,1vw,7px);border-radius:50%;
+  background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.15);
+  transition:all 0.4s;
+}
+.prog-dot.active{background:#ffcc88;border-color:#ffcc88;box-shadow:0 0 6px #ffcc88;}
+.prog-dot.done{background:rgba(255,200,100,0.4);border-color:rgba(255,200,100,0.3);}
+#menu-screen{
+  position:absolute;inset:0;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  background:rgba(8,4,18,0.95);border-radius:8px;
+  padding:20px;
+}
+#menu-screen h1{
+  font-family:'Playfair Display',serif;
+  font-size:clamp(28px,6vw,52px);color:#fff;margin-bottom:6px;
+}
+#menu-screen h1 span{color:#ffcc88;}
+#menu-screen p{
+  font-size:clamp(10px,1.5vw,13px);color:rgba(255,255,255,0.4);
+  letter-spacing:0.18em;text-transform:uppercase;margin-bottom:clamp(20px,4%,40px);
+}
+#menu-screen .subtitle{
+  font-family:'Playfair Display',serif;font-style:italic;
+  font-size:clamp(12px,2vw,16px);color:rgba(255,200,120,0.6);
+  margin-bottom:clamp(20px,4%,40px);margin-top:-10px;
+}
+.menu-btn{
+  background:transparent;border:1px solid rgba(255,200,100,0.4);
+  color:#ffcc88;font-family:'Lato',sans-serif;font-size:clamp(11px,1.5vw,13px);
+  letter-spacing:0.15em;text-transform:uppercase;
+  padding:clamp(10px,2%,12px) clamp(24px,4%,40px);border-radius:6px;cursor:pointer;
+  transition:all 0.2s;pointer-events:all;min-width:180px;
+  -webkit-tap-highlight-color:transparent;
+}
+.menu-btn:hover,.menu-btn:active{background:rgba(255,200,100,0.08);border-color:rgba(255,200,100,0.7);}
+</style>
+</head>
+<body>
+<div id="game-wrapper">
+<canvas id="c" width="860" height="520"></canvas>
+<div id="ui">
+  <div id="menu-screen">
+    <h1>Chloe <span>&</span> Lachie</h1>
+    <div class="subtitle">a story in three parts</div>
+    <p>Sunshine Coast, Queensland</p>
+    <button class="menu-btn" id="play-btn">Begin Their Story</button>
+    <button class="menu-btn" id="gallery-btn" style="margin-top:12px;">Gallery</button>
+  </div>
+  <div id="chapter-title">
+    <h2 id="ct-part"></h2>
+    <h1 id="ct-name"></h1>
+    <p id="ct-sub"></p>
+  </div>
+  <div id="progress">
+    <div class="prog-dot active" id="d0"></div>
+    <div class="prog-dot" id="d1"></div>
+    <div class="prog-dot" id="d2"></div>
+    <div class="prog-dot" id="d2b"></div>
+    <div class="prog-dot" id="d3"></div>
+  </div>
+  <div id="dialogue-box">
+    <div id="dialogue-name"></div>
+    <div id="dialogue-text"></div>
+    <div id="dialogue-continue">tap to continue ▾</div>
+  </div>
+  <div id="hint"></div>
+</div>
+</div>
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+const W = canvas.width, H = canvas.height;
+
+// ─── RESPONSIVE SCALING ───────────────────────────────────────────────────────
+function resizeCanvas() {
+  const wrapper = document.getElementById('game-wrapper');
+  const maxW = Math.min(window.innerWidth, 860);
+  const maxH = window.innerHeight;
+  const aspect = W / H;
+  let displayW = maxW;
+  let displayH = displayW / aspect;
+  if(displayH > maxH * 0.95) {
+    displayH = maxH * 0.95;
+    displayW = displayH * aspect;
+  }
+  wrapper.style.width = displayW + 'px';
+  canvas.style.width = displayW + 'px';
+  canvas.style.height = displayH + 'px';
+}
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+
+// ─── STATE ───────────────────────────────────────────────────────────────────
+let scene = 'menu';
+let chapter = 0; // 0=vida1, 1=aquarium, 2=nye, 3=vida2, 4=photos
+let dialogueQueue = [];
+let dialogueIdx = 0;
+let dialogueActive = false;
+let sceneTime = 0;
+let particles = [];
+let stars = [];
+let transitionAlpha = 0;
+let transitioning = false;
+let typewriterText = '';
+let typewriterFull = '';
+let typewriterTimer = 0;
+let bubbles = [];
+let confetti = [];
+
+// ─── STARS ───────────────────────────────────────────────────────────────────
+for(let i=0;i<120;i++) stars.push({x:Math.random()*W,y:Math.random()*H*0.7,r:0.3+Math.random()*1.2,b:Math.random()});
+
+// ─── PHOTO PLACEHOLDERS ──────────────────────────────────────────────────────
+// Replace the src values below with your own photo filenames later.
+// Keep the files in the same folder as this HTML file, or use paths like "photos/vida.jpg".
+const MEMORY_PHOTOS = [
+  {src:'photo-vida.jpg', label:'First Date · VIDA'},
+  {src:'photo-aquarium.jpg', label:'Aquarium · SEA LIFE'},
+  {src:'photo-nye.jpg', label:'New Year\'s Eve'},
+];
+
+const loadedMemoryPhotos = MEMORY_PHOTOS.map(photo => {
+  const img = new Image();
+  img.src = photo.src;
+  return {...photo, img};
+});
+
+// ─── CHARACTERS ──────────────────────────────────────────────────────────────
+// Animated sprite positions per chapter
+let chars = {};
+function resetChars(ch) {
+  const configs = [
+    // Ch 0: Vida - sitting at table (Lachie moved right, lowered to y:410)
+    { chloe:{x:320,y:410,sit:true,facing:-1}, lachie:{x:520,y:410,sit:true,facing:1} },
+    // Ch 1: Aquarium - walking (Moved left beside touch pool, lowered to y:410)
+    { chloe:{x:120,y:410,sit:false,facing:1}, lachie:{x:180,y:410,sit:false,facing:1} },
+    // Ch 2: NYE party (Lowered to y:410)
+    { chloe:{x:250,y:410,sit:false,facing:1}, lachie:{x:380,y:410,sit:false,facing:-1} },
+    // Ch 3: Vida again - sitting, proposal (Match Ch 0 positions)
+    { chloe:{x:320,y:410,sit:true,facing:-1}, lachie:{x:520,y:410,sit:true,facing:1} },
+    // Ch 4: Photo memories - standing together
+    { chloe:{x:360,y:430,sit:false,facing:1}, lachie:{x:500,y:430,sit:false,facing:-1} },
+  ];
+  chars = JSON.parse(JSON.stringify(configs[ch] || configs[0]));
+}
+
+// ─── DIALOGUE SYSTEM ─────────────────────────────────────────────────────────
+const CHAPTERS_DIALOGUE = [
+  // Chapter 0: First Date at Vida
+  [
+    {who:'Narrator', text:'After matching on Hinge, Chloe and Lachie realised they already sort of knew of each other, but thought it would be super uncool if either of them said that..'},
+    {who:'Lachie', text:'*nervously smiling* Soooo, what do you think we should be going for?.'},
+    {who:'Chloe', text:'Hm... Im not sure, but how about i get drinks, and you get food?'},
+    {who:'Narrator', text: 'Chloe infact, did not get drinks.'},
+    {who:'Chloe', text:'Aw, is that a pokemon in your phonecase? Who is it?'},
+    {who:'Lachie', text:'It is! Its delibird, hes my favourite! Do you have a favourite?'},
+    {who:'Chloe', text:'Definitley lotad!'},
+    {who:'Lachie', text:'Oooo very solid choice! I love your jade bracelet by the way, it really suits you.'},
+    {who:'Chloe', text:'And i love your jacket, its so cool'},
+    {who:'Narrator', text:'They ordered, shared food, but were shocked by a certain something...'},
+    {who:'Chloe', text:'Wait. The calamari is not fried?'},
+    {who:'Lachie', text:'I know. I fully expected crispy rings. This feels like we have been tricked.'},
+    {who:'Chloe', text:'*laughing* It is still good, but my brain absolutely prepared for fried calamari.'},
+    {who:'Narrator', text:'The tacos arrived, the conversation got easier, and the night started feeling less like a first date and more like the start of something they already wanted to keep going.'},
+  ],
+  // Chapter 1: SEA LIFE Aquarium
+  [
+    {who:'Narrator', text:'SEA LIFE Sunshine Coast, Maroochydore. The blue glow of the tanks washed over their faces as they wandered through together.'},
+    {who:'Chloe', text:'*gripping Lachie\'s arm* Oh my gosh — look at the seahorses.'},
+    {who:'Lachie', text:'They are so tiny. I feel like they should not be real.'},
+    {who:'Chloe', text:'They hold each other\'s tails so they do not drift away. That is actually adorable.'},
+    {who:'Lachie', text:'Thats so cute.'},
+    {who:'Narrator', text:'They moved toward the touch pool, where the starfish waited in a real small pond.'},
+    {who:'Chloe', text:'Lachie. Look at that really big fat starfish.'},
+    {who:'Lachie', text:'Oh my god, that guys huge. Like that is ridiculous'},
+    {who:'Chloe', text:'*laughing* We need to get photobooth photos after this.'},
+    {who:'Lachie', text:'Id love that, Chloe.'},
+    {who:'Narrator', text:'They did not get photobooth photos (this time).'},
+    {who:'Narrator', text:'But they stayed at the touch pool for way too long, laughing at starfish and already having one of their favourite days together.'},
+  ],
+  // Chapter 2: New Year's Eve
+  [
+    {who:'Narrator', text:'New Year\'s Eve. The party was loud, the night was warm, and somewhere outside, the beach was waiting.'},
+    {who:'Chloe', text:'Lachie, do you want to go to the beach? Basically everyone else has'},
+    {who:'Lachie', text:'With you? I would love to.'},
+    {who:'Narrator', text:'They broke away from the party, and stumbled in the general direction of the beach.'},
+    {who:'Lachie', text:'We are not making it there are we?'},
+    {who:'Chloe', text:'*laughing* Well it is basically midnight'},
+    {who:'Narrator', text:'They did not make it to the sand. Instead, they found themselves sitting side by side on the curb, breathless and happy.'},
+    {who:'Lachie', text:'Thank you for inviting me. I am really, really glad I came with you.'},
+    {who:'Chloe', text:'I am really glad you came too.'},
+    {who:'Narrator', text:'In the distance, the muffled cheers of the crowd rang out.'},
+    {who:'Everyone (Distant)', text:'THREE! TWO! ONE!'},
+    {who:'Narrator', text:'Fireworks lit up the sky behind the houses. For a second, neither of them said anything.'},
+    {who:'Lachie', text:'Happy New Year, Chloe.'},
+    {who:'Chloe', text:'*softly* Happy New Year, Lachie.'},
+    {who:'Narrator', text:'And sitting right there on the curb, as the new year began, they kissed.'},
+  ],
+  // Chapter 3: New Year's Day — Back at Vida
+  [
+    {who:'Narrator', text:'New Year\'s Day, Afternoon and post aldi-shift. They were back outside VIDA, the place where the nerves, tacos, and not-fried calamari had all started.'},
+    {who:'Chloe', text:'*smiling* It feels kind of perfect being back here.'},
+    {who:'Lachie', text:'Yeah. This place feels pretty special now.'},
+    {who:'Narrator', text:'The afternoon was quiet, and Lachie was secretly terrified'},
+    {who:'Chloe', text:'You look like you are about to say something important.'},
+    {who:'Lachie', text:'*takes a breath* Chloe, I\'m so lucky to have been able to spend all this time with you. I have a gift and a special question to ask you.'},
+    {who:'Narrator', text:'He gave her flowers first, then a letter, his hands a little nervous but his smile completely sure.'},
+    {who:'Lachie', text:'You make everything feel easier and brighter, and I do not want this to just be something we remember. I want it to be something we keep choosing.'},
+    {who:'Lachie', text:'Chloe, will you be my girlfriend?'},
+    {who:'Chloe', text:'*eyes glistening, smiling before he even finishes* Yes. Of course yes.'},
+    {who:'Narrator', text:'And just like that, outside VIDA, in the afternoon hours of a brand new year, Chloe and Lachie became something official.'},
+    {who:'The Real Lachie!', text:'Hi baby! It\'s me this time, I hope you enjoyed my silly little thing, I have been working on it in secret for a while now. It was meant to be for our 3 months originally but it took a really long time.'},
+    {who:'The Real Lachie!', text:'As a final message baby, I\'m writing just to let you know, things have been hard. Things have been really hard. But no matter what, I always truly meant it when I told you I\'d keep going and I\'d keep growing, and most importantly, I will wait. I am so deeply proud of you, all the effort you put in everyday. I want you to know I see you baby. I love you, everythings going to be ok.'},
+  ],
+  // Chapter 4: Photo Memories
+  [
+    {who:'Narrator', text:'And after all of that, there were the little pieces they got to keep.'},
+    {who:'Narrator', text:'Three dates. Three memories. A first dinner, an aquarium day, and a New Year that changed everything.'},
+    {who:'Narrator', text:'This is where their real photos belong.'},
+    {who:'The Real Lachie!', text:'You can replace these photo placeholders with pictures of us whenever you want, baby. I love you.'},
+  ],
+];
+
+const CHAPTER_META = [
+  {part:'Part One', name:'The First Date', sub:'VIDA Mexican · Buddina, Sunshine Coast', bg:'vida'},
+  {part:'Part Two', name:'The Aquarium', sub:'SEA LIFE Sunshine Coast · Maroochydore', bg:'aquarium'},
+  {part:'Part Three', name:'New Year\'s Eve', sub:'A Friend\'s Place · Sunshine Coast', bg:'nye'},
+  {part:'Epilogue', name:'New Year\'s Day', sub:'VIDA Mexican · Where It All Began', bg:'vida2'},
+  {part:'Final Chapter', name:'Photo Memories', sub:'Three dates · Three little pieces of us', bg:'photos'},
+];
+
+// ─── RENDERING ───────────────────────────────────────────────────────────────
+
+function drawStars(alpha=1) {
+  ctx.globalAlpha = alpha;
+  for(const s of stars) {
+    const flicker = 0.5 + 0.5*Math.sin(sceneTime*0.8 + s.b*10);
+    ctx.globalAlpha = alpha * (s.b*0.5 + 0.3) * flicker;
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.arc(s.x, s.y, s.r, 0, Math.PI*2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+
+// ── VIDA Background ──────────────────────────────────────────────────────────
+function drawVida(timeOfDay='night') {
+  // Sky gradient
+  const isNight = timeOfDay === 'night';
+  const sky = ctx.createLinearGradient(0, 0, 0, H);
+  if(isNight) {
+    sky.addColorStop(0, '#0a0520');
+    sky.addColorStop(1, '#1a0a30');
+  } else {
+    sky.addColorStop(0, '#ffecd2');
+    sky.addColorStop(1, '#fcb69f');
+  }
+  ctx.fillStyle = sky;
+  ctx.fillRect(0, 0, W, H);
+
+  if(isNight) drawStars(0.8);
+
+  // Sun/moon
+  if(isNight) {
+    ctx.fillStyle = 'rgba(255,240,200,0.9)';
+    ctx.beginPath();
+    ctx.arc(700, 80, 22, 0, Math.PI*2);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(255,240,200,0.08)';
+    ctx.beginPath();
+    ctx.arc(700, 80, 40, 0, Math.PI*2);
+    ctx.fill();
+  } else {
+    ctx.fillStyle = '#ffb347';
+    ctx.beginPath();
+    ctx.arc(140, 90, 45, 0, Math.PI*2);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(255,200,100,0.15)';
+    ctx.beginPath();
+    ctx.arc(140, 90, 70, 0, Math.PI*2);
+    ctx.fill();
+  }
+
+  // Floor
+  const floor = ctx.createLinearGradient(0, H-80, 0, H);
+  floor.addColorStop(0, '#2a1a0a');
+  floor.addColorStop(1, '#1a0f05');
+  ctx.fillStyle = floor;
+  ctx.fillRect(0, H-80, W, 80);
+
+  // Tile pattern
+  ctx.strokeStyle = 'rgba(255,200,100,0.06)';
+  ctx.lineWidth = 1;
+  for(let x=0;x<W;x+=40){ ctx.beginPath();ctx.moveTo(x,H-80);ctx.lineTo(x,H);ctx.stroke(); }
+  for(let y=H-80;y<H;y+=20){ ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke(); }
+
+  // Walls / windows 
+  ctx.fillStyle = isNight ? '#1c0e05' : '#2c1a0a';
+  ctx.fillRect(0, H-240, W, 160);
+
+  // Window frames
+  for(let wx=60;wx<W-60;wx+=200) {
+    ctx.fillStyle = isNight ? 'rgba(255,220,140,0.12)' : 'rgba(255,220,140,0.3)';
+    ctx.fillRect(wx, H-230, 120, 100);
+    ctx.strokeStyle = '#8B6914';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(wx, H-230, 120, 100);
+    // Cross bar
+    ctx.beginPath();ctx.moveTo(wx+60,H-230);ctx.lineTo(wx+60,H-130);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(wx,H-180);ctx.lineTo(wx+120,H-180);ctx.stroke();
+  }
+
+  // String lights
+  ctx.strokeStyle = 'rgba(255,230,100,0.6)';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  for(let i=0;i<W;i+=20) {
+    const sag = Math.sin(i * 0.04) * 8 + 8;
+    if(i===0) ctx.moveTo(i, H-245+sag);
+    else ctx.lineTo(i, H-245+sag);
+  }
+  ctx.stroke();
+  // Bulbs
+  for(let i=0;i<W;i+=20) {
+    const sag = Math.sin(i * 0.04) * 8 + 8;
+    ctx.fillStyle = `hsl(${40+i%80},100%,${60+20*Math.sin(sceneTime+i)}%)`;
+    ctx.globalAlpha = 0.85;
+    ctx.beginPath();
+    ctx.arc(i, H-245+sag, 3, 0, Math.PI*2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  // Table
+  ctx.fillStyle = '#5c3a1e';
+  ctx.beginPath();
+  ctx.ellipse(W/2, H-115, 110, 35, 0, 0, Math.PI*2);
+  ctx.fill();
+  ctx.fillStyle = '#7a4e28';
+  ctx.beginPath();
+  ctx.ellipse(W/2, H-120, 110, 35, 0, 0, Math.PI*2);
+  ctx.fill();
+  // Table cloth
+  ctx.fillStyle = '#c8102e';
+  ctx.beginPath();
+  ctx.ellipse(W/2, H-122, 100, 30, 0, 0, Math.PI*2);
+  ctx.fill();
+
+  // Candle
+  ctx.fillStyle = '#fffacd';
+  ctx.fillRect(W/2-4, H-160, 8, 30);
+  ctx.fillStyle = '#ff9900';
+  ctx.globalAlpha = 0.8 + 0.2*Math.sin(sceneTime*3);
+  ctx.beginPath();
+  ctx.arc(W/2, H-162, 5, 0, Math.PI*2);
+  ctx.fill();
+  ctx.globalAlpha = 0.15 + 0.05*Math.sin(sceneTime*3);
+  ctx.fillStyle = '#ffdd44';
+  ctx.beginPath();
+  ctx.arc(W/2, H-162, 20, 0, Math.PI*2);
+  ctx.fill();
+  ctx.globalAlpha = 1;
+
+  // Taco plates (Only draw during chapter 0 meal)
+  if (chapter === 0) {
+    drawTacoPlate(W/2 - 45, H-140);
+    drawTacoPlate(W/2 + 25, H-140);
+  }
+
+  // VIDA sign (Moved Up)
+  ctx.fillStyle = isNight ? 'rgba(255,220,100,0.9)' : 'rgba(180,100,20,0.9)';
+  ctx.font = 'bold 22px "Playfair Display", serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('VIDA', W/2, H-280);
+  ctx.font = '11px Lato, sans-serif';
+  ctx.fillStyle = 'rgba(255,200,100,0.5)';
+  ctx.fillText('MEXICAN KITCHEN & BAR · BUDDINA', W/2, H-263);
+  ctx.textAlign = 'left';
+}
+
+function drawTacoPlate(x, y) {
+  ctx.fillStyle = '#eee';
+  ctx.beginPath();
+  ctx.ellipse(x, y, 18, 7, 0, 0, Math.PI*2);
+  ctx.fill();
+  // Taco shape
+  ctx.fillStyle = '#d4a04a';
+  ctx.beginPath();
+  ctx.arc(x-2, y-5, 8, Math.PI, 0);
+  ctx.fill();
+  ctx.fillStyle = '#5a3e1b';
+  ctx.fillRect(x-6, y-7, 10, 3);
+  ctx.fillStyle = '#4CAF50';
+  ctx.fillRect(x-4, y-8, 8, 2);
+}
+
+// ── AQUARIUM Background ──────────────────────────────────────────────────────
+function drawAquarium() {
+  // Deep blue bg
+  const bg = ctx.createLinearGradient(0, 0, 0, H);
+  bg.addColorStop(0, '#020e1a');
+  bg.addColorStop(1, '#041826');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, W, H);
+
+  // Large tank left
+  drawTank(30, 80, 280, 320, '#44aaff', true);
+  // Large tank right  
+  drawTank(560, 80, 280, 320, '#2288cc', true);
+  // Touch pool bottom center
+  drawTouchPool(220, H-180, 420, 90);
+
+  // Floor
+  const floorG = ctx.createLinearGradient(0, H-90, 0, H);
+  floorG.addColorStop(0,'#1a1a2a');
+  floorG.addColorStop(1,'#0a0a18');
+  ctx.fillStyle = floorG;
+  ctx.fillRect(0, H-90, W, 90);
+
+  // Floor pattern
+  ctx.strokeStyle = 'rgba(68,170,255,0.08)';
+  ctx.lineWidth = 1;
+  for(let x=0;x<W;x+=50){ ctx.beginPath();ctx.moveTo(x,H-90);ctx.lineTo(x,H);ctx.stroke(); }
+
+  // SEA LIFE sign
+  ctx.fillStyle = 'rgba(68,200,255,0.9)';
+  ctx.font = 'bold 18px Lato, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('SEA LIFE SUNSHINE COAST', W/2, 50);
+  ctx.font = '11px Lato, sans-serif';
+  ctx.fillStyle = 'rgba(68,170,255,0.5)';
+  ctx.fillText('MAROOCHYDORE', W/2, 68);
+  ctx.textAlign = 'left';
+
+  // Bubble streams
+  updateBubbles();
+}
+
+function drawTank(x, y, w, h, color, hasSeahorse) {
+  // Tank glass
+  ctx.strokeStyle = 'rgba(100,200,255,0.3)';
+  ctx.lineWidth = 3;
+  const grad = ctx.createLinearGradient(x, y, x+w, y+h);
+  grad.addColorStop(0, 'rgba(0,40,80,0.7)');
+  grad.addColorStop(0.5, 'rgba(0,60,120,0.5)');
+  grad.addColorStop(1, 'rgba(0,40,80,0.7)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(x, y, w, h);
+  ctx.strokeRect(x, y, w, h);
+
+  // Light caustics (animated)
+  ctx.globalAlpha = 0.08;
+  for(let i=0;i<5;i++){
+    ctx.fillStyle = '#88ddff';
+    ctx.beginPath();
+    const cx = x + w*0.2 + i*(w*0.15) + Math.sin(sceneTime*0.5+i)*10;
+    const cy = y + 20 + Math.cos(sceneTime*0.4+i)*8;
+    ctx.arc(cx, cy, 20+i*5, 0, Math.PI*2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  // Seaweed
+  for(let i=0;i<4;i++){
+    drawSeaweed(x+30+i*55, y+h, 3);
+  }
+
+  // Sand
+  ctx.fillStyle = '#c4a46a';
+  ctx.fillRect(x, y+h-15, w, 15);
+
+  // Seahorses
+  if(hasSeahorse) {
+    drawSeahorse(x + w*0.35, y + h*0.4, '#ffaa44');
+    drawSeahorse(x + w*0.65, y + h*0.55, '#ff88aa');
+  }
+
+  // Glass reflection
+  ctx.fillStyle = 'rgba(255,255,255,0.04)';
+  ctx.fillRect(x+4, y+4, 12, h-8);
+}
+
+function drawTouchPool(x, y, w, h) {
+  // Open pool (no lid)
+  ctx.fillStyle = 'rgba(0,80,120,0.5)';
+  ctx.fillRect(x, y, w, h);
+  ctx.strokeStyle = 'rgba(100,200,255,0.4)';
+  ctx.lineWidth = 3;
+  ctx.strokeRect(x, y, w, h);
+
+  // Water ripples
+  ctx.strokeStyle = 'rgba(150,220,255,0.2)';
+  ctx.lineWidth = 1;
+  for(let i=0;i<3;i++){
+    ctx.beginPath();
+    ctx.ellipse(x+w/2, y+h/2, 60+i*30+Math.sin(sceneTime+i)*5, 12+i*6, 0, 0, Math.PI*2);
+    ctx.stroke();
+  }
+
+  // Starfish
+  drawStarfish(x + w*0.25, y + h*0.5, '#e05a1a', 18);
+  drawStarfish(x + w*0.55, y + h*0.4, '#d44a3a', 14);
+  drawStarfish(x + w*0.75, y + h*0.6, '#c0752a', 16);
+
+  // Label
+  ctx.fillStyle = 'rgba(150,220,255,0.6)';
+  ctx.font = '11px Lato, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('TOUCH POOL', x+w/2, y-8);
+  ctx.textAlign = 'left';
+}
+
+function drawSeahorse(x, y, color) {
+  const t = sceneTime;
+  ctx.save();
+  ctx.translate(x, y);
+  // Body segments (simplified)
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 6;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  ctx.bezierCurveTo(
+    15 + Math.sin(t*1.2)*3, -15,
+    10 + Math.cos(t)*3, -35,
+    0 + Math.sin(t*0.8)*2, -50
+  );
+  ctx.stroke();
+  // Snout
+  ctx.beginPath();
+  ctx.moveTo(0 + Math.sin(t*0.8)*2, -50);
+  ctx.lineTo(15, -55);
+  ctx.stroke();
+  // Fin
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2;
+  ctx.globalAlpha = 0.5 + 0.3*Math.sin(t*4);
+  ctx.beginPath();
+  ctx.ellipse(10 + Math.sin(t*1.2)*3, -30, 8, 4, 0.5, 0, Math.PI*2);
+  ctx.stroke();
+  ctx.globalAlpha = 1;
+  // Tail curl
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  ctx.bezierCurveTo(-8, 12, -15 + Math.sin(t*0.9)*3, 20, -8 + Math.sin(t)*2, 28);
+  ctx.stroke();
+  // Eye
+  ctx.fillStyle = '#fff';
+  ctx.beginPath();
+  ctx.arc(4 + Math.sin(t*0.8)*2, -48, 4, 0, Math.PI*2);
+  ctx.fill();
+  ctx.fillStyle = '#222';
+  ctx.beginPath();
+  ctx.arc(5 + Math.sin(t*0.8)*2, -48, 2, 0, Math.PI*2);
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawStarfish(x, y, color, r) {
+  ctx.fillStyle = color;
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(sceneTime * 0.1);
+  ctx.beginPath();
+  for(let i=0;i<5;i++){
+    const a = (i/5)*Math.PI*2 - Math.PI/2;
+    const ai = ((i+0.5)/5)*Math.PI*2 - Math.PI/2;
+    if(i===0) ctx.moveTo(Math.cos(a)*r, Math.sin(a)*r);
+    else ctx.lineTo(Math.cos(a)*r, Math.sin(a)*r);
+    ctx.lineTo(Math.cos(ai)*r*0.45, Math.sin(ai)*r*0.45);
+  }
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawSeaweed(x, baseY, count) {
+  ctx.strokeStyle = '#2d7a22';
+  ctx.lineWidth = 3;
+  ctx.lineCap = 'round';
+  for(let i=0;i<count;i++){
+    const h = 30 + i*10;
+    const wave = Math.sin(sceneTime*1.2 + i + x*0.1)*8;
+    ctx.beginPath();
+    ctx.moveTo(x + i*5, baseY);
+    ctx.bezierCurveTo(x+i*5+wave, baseY-h*0.4, x+i*5-wave, baseY-h*0.7, x+i*5+wave*0.5, baseY-h);
+    ctx.stroke();
+  }
+}
+
+let bubbleTimer = 0;
+function updateBubbles() {
+  bubbleTimer++;
+  if(bubbleTimer % 20 === 0) {
+    bubbles.push({x:60+Math.random()*200, y:350, r:2+Math.random()*3, vy:-0.8-Math.random()*0.5});
+    bubbles.push({x:580+Math.random()*200, y:350, r:1.5+Math.random()*3, vy:-0.7-Math.random()*0.5});
+  }
+  for(let i=bubbles.length-1;i>=0;i--){
+    const b = bubbles[i];
+    b.y += b.vy;
+    b.x += Math.sin(sceneTime + b.y*0.05)*0.4;
+    if(b.y < 80) bubbles.splice(i,1);
+    else {
+      ctx.strokeStyle = 'rgba(150,220,255,0.3)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(b.x, b.y, b.r, 0, Math.PI*2);
+      ctx.stroke();
+    }
+  }
+}
+
+// ── NYE Background ───────────────────────────────────────────────────────────
+function drawNYE() {
+  const bg = ctx.createLinearGradient(0, 0, 0, H);
+  bg.addColorStop(0, '#0a0520');
+  bg.addColorStop(1, '#1a0a35');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, W, H);
+
+  drawStars(0.9);
+
+  // Fireworks
+  for(const p of particles) {
+    ctx.globalAlpha = Math.max(0, p.life / p.maxLife);
+    ctx.fillStyle = p.color;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  // House outline
+  ctx.fillStyle = '#1a0e2a';
+  ctx.fillRect(50, 200, 700, 280);
+
+  // Roof
+  ctx.fillStyle = '#120a20';
+  ctx.beginPath();
+  ctx.moveTo(30, 200);
+  ctx.lineTo(400, 80);
+  ctx.lineTo(770, 200);
+  ctx.closePath();
+  ctx.fill();
+
+  // Windows (glowing party)
+  const winColors = ['rgba(255,200,100,0.4)','rgba(255,120,180,0.35)','rgba(100,200,255,0.35)'];
+  const wins = [[80,240,120,80],[260,240,120,80],[480,240,120,80],[660,240,120,80]];
+  wins.forEach((w,i)=>{
+    const pulse = 0.3 + 0.15*Math.sin(sceneTime*3 + i*1.3);
+    ctx.fillStyle = winColors[i%winColors.length].replace('0.4', String(pulse+0.2));
+    ctx.fillRect(w[0],w[1],w[2],w[3]);
+    ctx.strokeStyle = '#4a2a6a';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(w[0],w[1],w[2],w[3]);
+  });
+
+  // Door
+  ctx.fillStyle = 'rgba(255,150,50,0.3)';
+  ctx.fillRect(335, 360, 80, 120);
+  ctx.strokeStyle = '#4a2a6a';
+  ctx.lineWidth = 3;
+  ctx.strokeRect(335, 360, 80, 120);
+
+  // Floor
+  const floorG = ctx.createLinearGradient(0, H-80, 0, H);
+  floorG.addColorStop(0,'#150b25');
+  floorG.addColorStop(1,'#0a0518');
+  ctx.fillStyle = floorG;
+  ctx.fillRect(0, H-80, W, 80);
+
+  // Fairy lights on house
+  ctx.strokeStyle = 'rgba(255,220,100,0.5)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(50, 200);
+  for(let x=50;x<=750;x+=15){ ctx.lineTo(x, 200 + Math.sin(x*0.2)*4); }
+  ctx.stroke();
+  for(let x=50;x<=750;x+=15){
+    ctx.fillStyle = `hsl(${(x*3+sceneTime*30)%360},100%,70%)`;
+    ctx.globalAlpha = 0.7 + 0.3*Math.sin(sceneTime*4+x);
+    ctx.beginPath();
+    ctx.arc(x, 200+Math.sin(x*0.2)*4, 2.5, 0, Math.PI*2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  // Confetti
+  for(const c of confetti) {
+    ctx.save();
+    ctx.translate(c.x, c.y);
+    ctx.rotate(c.r);
+    ctx.fillStyle = c.color;
+    ctx.globalAlpha = c.alpha;
+    ctx.fillRect(-c.w/2, -c.h/2, c.w, c.h);
+    ctx.restore();
+  }
+
+  // Countdown / NYE label
+  ctx.fillStyle = 'rgba(255,220,100,0.8)';
+  ctx.font = 'bold 15px "Playfair Display", serif';
+  ctx.textAlign = 'center';
+  const nyeLabel = dialogueIdx >= 7 ? '🎉 HAPPY NEW YEAR! 🎉' : "New Year's Eve";
+  ctx.fillText(nyeLabel, W/2, 50);
+  ctx.textAlign = 'left';
+}
+
+// ── PHOTO MEMORIES Background ────────────────────────────────────────────────
+function drawPhotoMemories() {
+  const bg = ctx.createLinearGradient(0, 0, 0, H);
+  bg.addColorStop(0, '#12051f');
+  bg.addColorStop(1, '#2a0f2f');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, W, H);
+
+  drawStars(0.75);
+
+  ctx.fillStyle = 'rgba(255,220,150,0.9)';
+  ctx.font = 'bold 20px "Playfair Display", serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('OUR LITTLE MEMORIES', W/2, 52);
+  ctx.font = '11px Lato, sans-serif';
+  ctx.fillStyle = 'rgba(255,230,190,0.55)';
+  ctx.fillText('replace the placeholder filenames with your real photos', W/2, 72);
+
+  const cards = [
+    {x:90, y:105, w:200, h:250, r:-0.07},
+    {x:330, y:90, w:200, h:250, r:0.04},
+    {x:570, y:110, w:200, h:250, r:-0.03},
+  ];
+
+  cards.forEach((card, i) => {
+    const photo = loadedMemoryPhotos[i];
+    ctx.save();
+    ctx.translate(card.x + card.w/2, card.y + card.h/2);
+    ctx.rotate(card.r + Math.sin(sceneTime + i) * 0.005);
+
+    ctx.fillStyle = 'rgba(0,0,0,0.28)';
+    ctx.fillRect(-card.w/2 + 8, -card.h/2 + 10, card.w, card.h);
+
+    ctx.fillStyle = '#fff8ec';
+    ctx.fillRect(-card.w/2, -card.h/2, card.w, card.h);
+
+    const imgX = -card.w/2 + 14;
+    const imgY = -card.h/2 + 14;
+    const imgW = card.w - 28;
+    const imgH = card.h - 70;
+
+    if(photo && photo.img && photo.img.complete && photo.img.naturalWidth > 0) {
+      const scale = Math.max(imgW / photo.img.naturalWidth, imgH / photo.img.naturalHeight);
+      const sw = imgW / scale;
+      const sh = imgH / scale;
+      const sx = (photo.img.naturalWidth - sw) / 2;
+      const sy = (photo.img.naturalHeight - sh) / 2;
+      ctx.drawImage(photo.img, sx, sy, sw, sh, imgX, imgY, imgW, imgH);
+    } else {
+      const ph = ctx.createLinearGradient(imgX, imgY, imgX + imgW, imgY + imgH);
+      ph.addColorStop(0, '#ffe3ef');
+      ph.addColorStop(1, '#c7ddff');
+      ctx.fillStyle = ph;
+      ctx.fillRect(imgX, imgY, imgW, imgH);
+      ctx.fillStyle = 'rgba(90,40,80,0.45)';
+      ctx.font = 'bold 13px Lato, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('PHOTO', 0, -12);
+      ctx.font = '10px Lato, sans-serif';
+      ctx.fillText(photo.src, 0, 8);
+    }
+
+    ctx.fillStyle = '#5a3448';
+    ctx.font = '13px "Playfair Display", serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(photo.label, 0, card.h/2 - 26);
+
+    ctx.restore();
+  });
+
+  for(let i=0;i<6;i++) {
+    drawHeart(170 + i*105, 385 + Math.sin(sceneTime*1.4 + i)*4, 5, 0.45);
+  }
+
+  ctx.textAlign = 'left';
+}
+
+// ─── CHARACTER DRAWING ───────────────────────────────────────────────────────
+function drawPerson(x, y, isSitting, color, hairColor, name, isLeft) {
+  const t = sceneTime;
+  const breathe = Math.sin(t * 1.5) * 1.5;
+
+  ctx.save();
+  if(!isLeft) { ctx.translate(x*2, 0); ctx.scale(-1,1); }
+  ctx.translate(0, breathe);
+
+  const bx = x, by = y;
+  const sitting = isSitting;
+
+  // Shadow
+  ctx.fillStyle = 'rgba(0,0,0,0.2)';
+  ctx.beginPath();
+  ctx.ellipse(bx, by + (sitting?2:6), 18, 5, 0, 0, Math.PI*2);
+  ctx.fill();
+
+  if(sitting) {
+    // Legs (dangling)
+    ctx.fillStyle = '#4a6fa5';
+    ctx.fillRect(bx-12, by-8, 10, 22);
+    ctx.fillRect(bx+2, by-8, 10, 22);
+    // Feet
+    ctx.fillStyle = '#2c2c2c';
+    ctx.fillRect(bx-14, by+12, 12, 7);
+    ctx.fillRect(bx+2, by+12, 12, 7);
+  } else {
+    // Legs walking
+    const legSwing = Math.sin(t*3)*8;
+    ctx.fillStyle = '#4a6fa5';
+    ctx.fillRect(bx-10, by-5, 9, 28 + legSwing);
+    ctx.fillRect(bx+1, by-5, 9, 28 - legSwing);
+    ctx.fillStyle = '#2c2c2c';
+    ctx.fillRect(bx-12, by+20+legSwing, 12, 8);
+    ctx.fillRect(bx+1, by+20-legSwing, 12, 8);
+  }
+
+  // Body
+  ctx.fillStyle = color;
+  ctx.fillRect(bx-14, by-40, 28, sitting?32:35);
+
+  // Arms
+  const armSwing = sitting ? 0 : Math.sin(t*3)*10;
+  ctx.fillStyle = color;
+  ctx.fillRect(bx-22, by-36, 9, 22);
+  ctx.fillRect(bx+13, by-36, 9, 22);
+  // Hands
+  ctx.fillStyle = '#f8c99e';
+  ctx.beginPath();
+  ctx.arc(bx-18, by-14+armSwing, 5, 0, Math.PI*2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(bx+18, by-14-armSwing, 5, 0, Math.PI*2);
+  ctx.fill();
+
+  // Head
+  ctx.fillStyle = '#f8c99e';
+  ctx.beginPath();
+  ctx.arc(bx, by-56, 18, 0, Math.PI*2);
+  ctx.fill();
+
+  // Hair
+  ctx.fillStyle = hairColor;
+  ctx.beginPath();
+  ctx.arc(bx, by-64, 16, Math.PI, 0);
+  ctx.fill();
+  if(name === 'Chloe') {
+    // Longer hair
+    ctx.fillRect(bx-16, by-64, 7, 22);
+    ctx.fillRect(bx+9, by-64, 7, 22);
+  }
+
+  // Eyes
+  const eyeOff = Math.floor(sceneTime/3)%40===0 ? 0 : 3; // blink
+  ctx.fillStyle = '#2c1a0a';
+  ctx.beginPath();
+  ctx.arc(bx-6, by-56, eyeOff===0?1:2.5, 0, Math.PI*2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(bx+6, by-56, eyeOff===0?1:2.5, 0, Math.PI*2);
+  ctx.fill();
+
+  // Smile
+  ctx.strokeStyle = '#c0704a';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.arc(bx, by-50, 6, 0.2, Math.PI-0.2);
+  ctx.stroke();
+
+  // Name tag
+  ctx.restore();
+  ctx.fillStyle = 'rgba(255,255,255,0.7)';
+  ctx.font = '10px Lato, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(name, x, y - 82);
+  ctx.textAlign = 'left';
+}
+
+function drawCharacters() {
+  if(!chars.chloe) return;
+  const c = chars.chloe, l = chars.lachie;
+  drawPerson(c.x, c.y, c.sit, '#e84393', '#4a2c0a', 'Chloe', false);
+  drawPerson(l.x, l.y, l.sit, '#3a7bd5', '#8B4513', 'Lachie', true);
+}
+
+// ─── HEART PARTICLES ─────────────────────────────────────────────────────────
+function spawnHeart(x, y) {
+  particles.push({
+    x, y, vx:(Math.random()-0.5)*2, vy:-2-Math.random()*2,
+    life:1.5, maxLife:1.5, r:6, color:'#ff6688', type:'heart'
+  });
+}
+
+function spawnFirework(x, y) {
+  const colors = ['#ff6688','#ffcc44','#88ddff','#aaffaa','#ffaaff'];
+  const col = colors[Math.floor(Math.random()*colors.length)];
+  for(let i=0;i<16;i++){
+    const a = (i/16)*Math.PI*2;
+    const s = 2 + Math.random()*3;
+    particles.push({
+      x, y, vx:Math.cos(a)*s, vy:Math.sin(a)*s - 1,
+      life:1.2, maxLife:1.2, r:2.5, color:col, type:'spark'
+    });
+  }
+}
+
+function spawnConfetti() {
+  for(let i=0;i<5;i++){
+    confetti.push({
+      x:Math.random()*W, y:-10,
+      vx:(Math.random()-0.5)*2, vy:2+Math.random()*3,
+      r:Math.random()*Math.PI*2, vr:(Math.random()-0.5)*0.2,
+      color:`hsl(${Math.random()*360},100%,65%)`,
+      w:6+Math.random()*8, h:4+Math.random()*5,
+      alpha:0.8+Math.random()*0.2
+    });
+  }
+}
+
+function updateParticles() {
+  for(let i=particles.length-1;i>=0;i--){
+    const p=particles[i];
+    p.x+=p.vx; p.y+=p.vy;
+    if(p.type!=='heart') p.vy+=0.08;
+    p.life-=0.016;
+    if(p.life<=0) particles.splice(i,1);
+  }
+}
+
+function updateConfetti() {
+  for(let i=confetti.length-1;i>=0;i--){
+    const c=confetti[i];
+    c.x+=c.vx; c.y+=c.vy; c.r+=c.vr;
+    if(c.y>H+20) confetti.splice(i,1);
+  }
+  if(chapter===2 && dialogueIdx>=7 && Math.random()<0.3) spawnConfetti();
+}
+
+// ─── DIALOGUE ────────────────────────────────────────────────────────────────
+const dlgBox = document.getElementById('dialogue-box');
+const dlgName = document.getElementById('dialogue-name');
+const dlgText = document.getElementById('dialogue-text');
+
+function startDialogue(lines) {
+  dialogueQueue = lines;
+  dialogueIdx = 0;
+  dialogueActive = true;
+  dlgBox.style.display = 'block';
+  showLine(0);
+}
+
+let typewriterInterval = null;
+function showLine(idx) {
+  if(idx >= dialogueQueue.length) {
+    dlgBox.style.display = 'none';
+    dialogueActive = false;
+    onDialogueEnd();
+    return;
+  }
+  const line = dialogueQueue[idx];
+  dlgName.textContent = line.who;
+
+  const nameColors = {
+    'Chloe':'#ff88cc', 'Lachie':'#88aaff',
+    'Narrator':'rgba(255,220,150,0.7)', 'Everyone (Distant)':'#aaffaa', 'The Real Lachie!':'#ffcc88'
+  };
+  dlgName.style.color = nameColors[line.who] || '#ffcc88';
+
+  typewriterFull = line.text;
+  typewriterText = '';
+  dlgText.textContent = '';
+
+  if(typewriterInterval) clearInterval(typewriterInterval);
+  let ci = 0;
+  typewriterInterval = setInterval(()=>{
+    if(ci < typewriterFull.length){
+      typewriterText += typewriterFull[ci++];
+      dlgText.textContent = typewriterText;
+    } else {
+      clearInterval(typewriterInterval);
+      typewriterInterval = null;
+    }
+  }, 22);
+
+  // Trigger chapter-specific effects
+  triggerEffects(idx);
+}
+
+function advanceDialogue() {
+  if(typewriterInterval) {
+    clearInterval(typewriterInterval);
+    typewriterInterval = null;
+    dlgText.textContent = typewriterFull;
+    return;
+  }
+  dialogueIdx++;
+  showLine(dialogueIdx);
+}
+
+function triggerEffects(idx) {
+  if(chapter === 0) {
+    if(idx === 6) { spawnHeart(W/2-60, H-160); spawnHeart(W/2+60, H-160); }
+    if(idx === 9) { for(let i=0;i<5;i++) setTimeout(()=>spawnHeart(W/2+(Math.random()-0.5)*150,H-150+Math.random()*30),i*200); }
+  }
+  if(chapter === 1) {
+    if(idx === 3) { spawnHeart(160,350); spawnHeart(210,350); }
+    if(idx === 9) { for(let i=0;i<4;i++) setTimeout(()=>spawnHeart(150+(Math.random()-0.5)*100,350),i*150); }
+  }
+  if(chapter === 2) {
+    if(idx === 7) {
+      for(let i=0;i<8;i++) setTimeout(()=>spawnFirework(100+Math.random()*600, 50+Math.random()*200),i*300);
+    }
+    if(idx === 10) { spawnHeart(W/2, H-200); spawnHeart(W/2-30, H-220); spawnHeart(W/2+30, H-220); }
+  }
+  if(chapter === 3) {
+    if(idx >= 8) {
+      for(let i=0;i<3;i++) setTimeout(()=>spawnHeart(W/2+(Math.random()-0.5)*200,H-150),i*200);
+    }
+  }
+  if(chapter === 4) {
+    for(let i=0;i<3;i++) setTimeout(()=>spawnHeart(180 + Math.random()*500, 390), i*180);
+  }
+}
+
+function onDialogueEnd() {
+  if(chapter < CHAPTERS_DIALOGUE.length - 1) {
+    setTimeout(()=>{
+      doTransition(()=>{
+        chapter++;
+        updateProgressDots();
+        resetChars(chapter);
+        particles=[];confetti=[];bubbles=[];
+        sceneTime=0; dialogueIdx=0;
+        showChapterTitle(chapter, ()=>{
+          startDialogue(CHAPTERS_DIALOGUE[chapter]);
+        });
+      });
+    }, 800);
+  } else {
+    // End of story
+    showEndScreen();
+  }
+}
+
+function showEndScreen() {
+  const menu = document.getElementById('menu-screen');
+  menu.style.display = 'flex';
+  menu.innerHTML = `
+    <h1 style="font-size:38px;">The End</h1>
+    <div class="subtitle">Chloe & Lachie · Sunshine Coast, 2024</div>
+    <p style="margin-bottom:30px; font-size:12px;">A story in three parts</p>
+    <button class="menu-btn" id="play-btn">Play Again ↺</button>
+  `;
+  document.getElementById('play-btn').addEventListener('click', ()=>{
+    menu.style.display='none';
+    chapter=0; particles=[];confetti=[];bubbles=[];sceneTime=0;
+    updateProgressDots();
+    resetChars(0);
+    showChapterTitle(0, ()=>startDialogue(CHAPTERS_DIALOGUE[0]));
+  });
+}
+
+// ─── TRANSITIONS ─────────────────────────────────────────────────────────────
+function doTransition(cb) {
+  transitioning = true;
+  transitionAlpha = 0;
+  const fadeIn = setInterval(()=>{
+    transitionAlpha = Math.min(1, transitionAlpha + 0.05);
+    if(transitionAlpha >= 1){
+      clearInterval(fadeIn);
+      cb();
+      const fadeOut = setInterval(()=>{
+        transitionAlpha = Math.max(0, transitionAlpha - 0.05);
+        if(transitionAlpha <= 0){ clearInterval(fadeOut); transitioning=false; }
+      }, 20);
+    }
+  }, 20);
+}
+
+function showChapterTitle(idx, cb) {
+  const el = document.getElementById('chapter-title');
+  const m = CHAPTER_META[idx];
+  document.getElementById('ct-part').textContent = m.part;
+  document.getElementById('ct-name').textContent = m.name;
+  document.getElementById('ct-sub').textContent = m.sub;
+  el.style.opacity = 1;
+  setTimeout(()=>{
+    el.style.opacity = 0;
+    setTimeout(cb, 900);
+  }, 2400);
+}
+
+function updateProgressDots() {
+  ['d0','d1','d2','d2b','d3'].forEach((id,i)=>{
+    const el = document.getElementById(id);
+    el.className = 'prog-dot' + (i===chapter?' active': i<chapter?' done':'');
+  });
+}
+
+// ─── HEART DRAWING ───────────────────────────────────────────────────────────
+function drawHeart(x, y, r, alpha) {
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = '#ff6688';
+  ctx.beginPath();
+  ctx.moveTo(x, y+r*0.3);
+  ctx.bezierCurveTo(x, y-r*0.5, x-r*1.1, y-r*0.5, x-r*1.1, y+r*0.2);
+  ctx.bezierCurveTo(x-r*1.1, y+r*0.9, x, y+r*1.4, x, y+r*1.4);
+  ctx.bezierCurveTo(x, y+r*1.4, x+r*1.1, y+r*0.9, x+r*1.1, y+r*0.2);
+  ctx.bezierCurveTo(x+r*1.1, y-r*0.5, x, y-r*0.5, x, y+r*0.3);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+}
+
+// ─── MAIN LOOP ───────────────────────────────────────────────────────────────
+let fireworkTimer = 0;
+function draw() {
+  ctx.clearRect(0, 0, W, H);
+  sceneTime += 0.016;
+
+  if(scene === 'story') {
+    // Background
+    const bg = CHAPTER_META[chapter]?.bg;
+    if(bg === 'vida' || bg === 'vida2') drawVida(bg === 'vida' ? 'night' : 'day');
+    else if(bg === 'aquarium') drawAquarium();
+    else if(bg === 'photos') drawPhotoMemories();
+    else if(bg === 'nye') {
+      fireworkTimer++;
+      if(fireworkTimer % 180 === 0) spawnFirework(100+Math.random()*600, 50+Math.random()*200);
+      drawNYE();
+      updateConfetti();
+    }
+
+    // Characters
+    drawCharacters();
+
+    // Floating hearts / sparks
+    for(let i=particles.length-1;i>=0;i--){
+      const p=particles[i];
+      const a=Math.max(0,p.life/p.maxLife);
+      if(p.type==='heart'){
+        p.y+=p.vy; p.vy*=0.98;
+        p.life-=0.008;
+        drawHeart(p.x, p.y, p.r, a);
+      }
+      // sparks drawn in NYE drawNYE
+    }
+    updateParticles();
+
+    // Transition overlay
+    if(transitionAlpha > 0) {
+      ctx.fillStyle = `rgba(5,2,15,${transitionAlpha})`;
+      ctx.fillRect(0, 0, W, H);
+    }
+  }
+
+  requestAnimationFrame(draw);
+}
+
+// ─── CLICK TO ADVANCE ────────────────────────────────────────────────────────
+dlgBox.addEventListener('click', advanceDialogue);
+dlgBox.addEventListener('touchend', e=>{ e.preventDefault(); advanceDialogue(); }, {passive:false});
+document.addEventListener('keydown', e=>{
+  if(e.code==='Space'||e.code==='Enter'||e.code==='ArrowRight') {
+    if(dialogueActive) { e.preventDefault(); advanceDialogue(); }
+  }
+});
+
+// ─── START ───────────────────────────────────────────────────────────────────
+document.getElementById('play-btn').addEventListener('click', ()=>{
+  document.getElementById('menu-screen').style.display = 'none';
+  scene = 'story';
+  chapter = 0;
+  resetChars(0);
+  updateProgressDots();
+  showChapterTitle(0, ()=>startDialogue(CHAPTERS_DIALOGUE[0]));
+});
+
+document.getElementById('gallery-btn').addEventListener('click', ()=>{
+  document.getElementById('menu-screen').style.display = 'none';
+  scene = 'story';
+  chapter = CHAPTERS_DIALOGUE.length - 1;
+  resetChars(chapter);
+  particles=[];confetti=[];bubbles=[];sceneTime=0;dialogueIdx=0;
+  updateProgressDots();
+  showChapterTitle(chapter, ()=>startDialogue(CHAPTERS_DIALOGUE[chapter]));
+});
+
+draw();
+</script>
+</body>
+</html>
